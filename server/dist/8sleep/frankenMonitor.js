@@ -1,5 +1,3 @@
-
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="de13dbc3-2dcc-530c-952f-a6d756cdb5d7")}catch(e){}}();
 import { EventEmitter } from 'events';
 import moment from 'moment-timezone';
 import logger from '../logger.js';
@@ -130,4 +128,3 @@ export class FrankenMonitor extends EventEmitter {
 // Singleton instance
 export const frankenMonitor = new FrankenMonitor();
 //# sourceMappingURL=frankenMonitor.js.map
-//# debugId=de13dbc3-2dcc-530c-952f-a6d756cdb5d7

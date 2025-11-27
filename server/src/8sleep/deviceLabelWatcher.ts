@@ -4,6 +4,7 @@ import { constants } from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import logger from '../logger.js';
+import { Version } from '../routes/deviceStatus/deviceStatusSchema.js';
 
 const execAsync = promisify(exec);
 
@@ -18,7 +19,19 @@ class DeviceLabelWatcher {
   private deviceLabelPath: string | null = null;
   private isProcessing = false;
 
-  async start(): Promise<void> {
+  /**
+   * Start the device label watcher.
+   * Only activates for Pod 3 hub with Pod 4+ cover.
+   * @param coverVersion - The cover version detected from franken
+   */
+  async start(coverVersion: Version): Promise<void> {
+    // Only enable for Pod 4 or Pod 5 covers
+    const isPod4PlusCover = coverVersion === Version.Pod4 || coverVersion === Version.Pod5;
+    if (!isPod4PlusCover) {
+      logger.info(`Device label watcher not needed for cover version: ${coverVersion}`);
+      return;
+    }
+
     // Find which path exists
     for (const path of DEVICE_LABEL_PATHS) {
       const exists = await access(path, constants.F_OK)
@@ -35,12 +48,22 @@ class DeviceLabelWatcher {
       return;
     }
 
-    logger.info(`Starting device label watcher for ${this.deviceLabelPath}`);
+    // Check if this is a Pod 3 hub (label starts with F in 3rd group)
+    const label = await readFile(this.deviceLabelPath, 'utf-8');
+    const parts = label.trim().split('-');
+    const hwRev = parts[2] || '';
+
+    // If already G or higher, no need to watch (unless Pod resets it)
+    if (!hwRev.startsWith('F')) {
+      logger.info(`Device label watcher: hub already at ${hwRev}, starting watch for resets`);
+    } else {
+      logger.info(`Starting device label watcher for Pod 3 hub (${hwRev}) with ${coverVersion} cover`);
+    }
 
     // Check and fix on startup
     await this.checkAndFixDeviceLabel();
 
-    // Watch for changes
+    // Watch for changes (in case Pod resets the label)
     this.watcher = watch(this.deviceLabelPath, async (eventType) => {
       if (eventType === 'change' && !this.isProcessing) {
         logger.debug('Device label file changed, checking...');

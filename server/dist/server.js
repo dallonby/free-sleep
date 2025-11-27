@@ -1,5 +1,3 @@
-
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="d2c96d62-31c7-5e53-9079-9f9facc9b8c7")}catch(e){}}();
 import './instrument.js';
 import express from 'express';
 import schedule from 'node-schedule';
@@ -105,13 +103,15 @@ async function startServer() {
     serverStatus.status.logger.status = 'healthy';
     // Initialize Franken once before listening
     if (!config.remoteDevMode) {
-        // Start device label watcher to fix Pod 3 hub with Pod 4+ cover
-        // This must run before franken connects so the hub uses correct firmware
-        void deviceLabelWatcher.start();
         void initFranken()
-            .then(() => {
+            .then(async () => {
             setupSentryTags();
             initFrankenMonitor();
+            // Start device label watcher for Pod 3 hub with Pod 4+ cover
+            // Must run after franken connects so we can detect the cover version
+            const franken = await connectFranken();
+            const deviceStatus = await franken.getDeviceStatus(false);
+            await deviceLabelWatcher.start(deviceStatus.coverVersion);
         })
             .catch(error => {
             serverStatus.status.franken.status = 'failed';
@@ -142,4 +142,3 @@ startServer().catch((err) => {
     process.exit(1);
 });
 //# sourceMappingURL=server.js.map
-//# debugId=d2c96d62-31c7-5e53-9079-9f9facc9b8c7

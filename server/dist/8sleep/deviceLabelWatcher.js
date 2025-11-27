@@ -1,11 +1,10 @@
-
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="e328ad25-eb3b-5865-9171-d30465b7ad81")}catch(e){}}();
 import { watch } from 'fs';
 import { readFile, writeFile, access } from 'fs/promises';
 import { constants } from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import logger from '../logger.js';
+import { Version } from '../routes/deviceStatus/deviceStatusSchema.js';
 const execAsync = promisify(exec);
 // Device label file paths (Pod 3 uses /deviceinfo/, Pod 4+ uses /persistent/deviceinfo/)
 const DEVICE_LABEL_PATHS = [
@@ -16,7 +15,18 @@ class DeviceLabelWatcher {
     watcher = null;
     deviceLabelPath = null;
     isProcessing = false;
-    async start() {
+    /**
+     * Start the device label watcher.
+     * Only activates for Pod 3 hub with Pod 4+ cover.
+     * @param coverVersion - The cover version detected from franken
+     */
+    async start(coverVersion) {
+        // Only enable for Pod 4 or Pod 5 covers
+        const isPod4PlusCover = coverVersion === Version.Pod4 || coverVersion === Version.Pod5;
+        if (!isPod4PlusCover) {
+            logger.info(`Device label watcher not needed for cover version: ${coverVersion}`);
+            return;
+        }
         // Find which path exists
         for (const path of DEVICE_LABEL_PATHS) {
             const exists = await access(path, constants.F_OK)
@@ -31,10 +41,20 @@ class DeviceLabelWatcher {
             logger.info('Device label file not found, skipping watcher');
             return;
         }
-        logger.info(`Starting device label watcher for ${this.deviceLabelPath}`);
+        // Check if this is a Pod 3 hub (label starts with F in 3rd group)
+        const label = await readFile(this.deviceLabelPath, 'utf-8');
+        const parts = label.trim().split('-');
+        const hwRev = parts[2] || '';
+        // If already G or higher, no need to watch (unless Pod resets it)
+        if (!hwRev.startsWith('F')) {
+            logger.info(`Device label watcher: hub already at ${hwRev}, starting watch for resets`);
+        }
+        else {
+            logger.info(`Starting device label watcher for Pod 3 hub (${hwRev}) with ${coverVersion} cover`);
+        }
         // Check and fix on startup
         await this.checkAndFixDeviceLabel();
-        // Watch for changes
+        // Watch for changes (in case Pod resets the label)
         this.watcher = watch(this.deviceLabelPath, async (eventType) => {
             if (eventType === 'change' && !this.isProcessing) {
                 logger.debug('Device label file changed, checking...');
@@ -90,7 +110,7 @@ class DeviceLabelWatcher {
     async restartFrankService() {
         try {
             logger.info('Restarting frank service...');
-            await execAsync('systemctl restart frank');
+            await execAsync('sudo /bin/systemctl restart frank');
             logger.info('Frank service restarted successfully');
         }
         catch (error) {
@@ -101,4 +121,3 @@ class DeviceLabelWatcher {
 // Singleton instance
 export const deviceLabelWatcher = new DeviceLabelWatcher();
 //# sourceMappingURL=deviceLabelWatcher.js.map
-//# debugId=e328ad25-eb3b-5865-9171-d30465b7ad81

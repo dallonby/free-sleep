@@ -6,6 +6,7 @@ import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
 import { frankenMonitor } from './8sleep/frankenMonitor.js';
 import { deviceLabelWatcher } from './8sleep/deviceLabelWatcher.js';
+import { Version } from './routes/deviceStatus/deviceStatusSchema.js';
 import './jobs/jobScheduler.js';
 
 
@@ -118,14 +119,16 @@ async function startServer() {
 
   // Initialize Franken once before listening
   if (!config.remoteDevMode) {
-    // Start device label watcher to fix Pod 3 hub with Pod 4+ cover
-    // This must run before franken connects so the hub uses correct firmware
-    void deviceLabelWatcher.start();
-
     void initFranken()
-      .then(() => {
+      .then(async () => {
         setupSentryTags();
         initFrankenMonitor();
+
+        // Start device label watcher for Pod 3 hub with Pod 4+ cover
+        // Must run after franken connects so we can detect the cover version
+        const franken = await connectFranken();
+        const deviceStatus = await franken.getDeviceStatus(false);
+        await deviceLabelWatcher.start(deviceStatus.coverVersion as Version);
       })
       .catch(error => {
         serverStatus.status.franken.status = 'failed';

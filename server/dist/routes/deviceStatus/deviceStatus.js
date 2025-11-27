@@ -1,5 +1,3 @@
-
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="2f9ba382-fe29-5e71-b7eb-2918b37fb63d")}catch(e){}}();
 import express from 'express';
 import { connectFranken } from '../../8sleep/frankenServer.js';
 import { DeviceStatusSchema } from './deviceStatusSchema.js';
@@ -49,4 +47,3 @@ router.post('/deviceStatus', async (req, res) => {
 });
 export default router;
 //# sourceMappingURL=deviceStatus.js.map
-//# debugId=2f9ba382-fe29-5e71-b7eb-2918b37fb63d
