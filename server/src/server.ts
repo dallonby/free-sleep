@@ -4,7 +4,7 @@ import schedule from 'node-schedule';
 import { Server } from 'http';
 import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
-import { FrankenMonitor } from './8sleep/frankenMonitor.js';
+import { frankenMonitor } from './8sleep/frankenMonitor.js';
 import './jobs/jobScheduler.js';
 
 
@@ -20,7 +20,6 @@ import { loadWifiSignalStrength } from './8sleep/wifiSignalStrength.js';
 const port = 3000;
 const app = express();
 let server: Server | undefined;
-let frankenMonitor: FrankenMonitor | undefined;
 
 async function disconnectPrisma() {
   try {
@@ -71,7 +70,7 @@ async function gracefulShutdown(signal: string) {
     }
 
     if (!config.remoteDevMode) {
-      frankenMonitor?.stop();
+      frankenMonitor.stop();
       await disconnectFranken();
       logger.debug('Successfully closed Franken components.');
     }
@@ -99,9 +98,8 @@ async function initFranken() {
 const initFrankenMonitor = () => {
   logger.info('Starting franken monitor...');
   serverStatus.status.frankenMonitor.status = 'started';
-  frankenMonitor = new FrankenMonitor();
   void frankenMonitor.start();
-  logger.info('Frank monitor started!');
+  logger.info('Franken monitor started!');
 };
 
 

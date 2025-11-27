@@ -1,11 +1,11 @@
 
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="9db73c62-f014-5de8-b792-af2dbfb404df")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="590db006-66e0-5157-8d84-dfb8d411c26f")}catch(e){}}();
 import './instrument.js';
 import express from 'express';
 import schedule from 'node-schedule';
 import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
-import { FrankenMonitor } from './8sleep/frankenMonitor.js';
+import { frankenMonitor } from './8sleep/frankenMonitor.js';
 import './jobs/jobScheduler.js';
 // Setup code
 import setupMiddleware from './setup/middleware.js';
@@ -18,7 +18,6 @@ import { loadWifiSignalStrength } from './8sleep/wifiSignalStrength.js';
 const port = 3000;
 const app = express();
 let server;
-let frankenMonitor;
 async function disconnectPrisma() {
     try {
         logger.debug('Flushing SQLite');
@@ -65,7 +64,7 @@ async function gracefulShutdown(signal) {
             });
         }
         if (!config.remoteDevMode) {
-            frankenMonitor?.stop();
+            frankenMonitor.stop();
             await disconnectFranken();
             logger.debug('Successfully closed Franken components.');
         }
@@ -89,9 +88,8 @@ async function initFranken() {
 const initFrankenMonitor = () => {
     logger.info('Starting franken monitor...');
     serverStatus.status.frankenMonitor.status = 'started';
-    frankenMonitor = new FrankenMonitor();
     void frankenMonitor.start();
-    logger.info('Frank monitor started!');
+    logger.info('Franken monitor started!');
 };
 // Main startup function
 async function startServer() {
@@ -139,4 +137,4 @@ startServer().catch((err) => {
     process.exit(1);
 });
 //# sourceMappingURL=server.js.map
-//# debugId=9db73c62-f014-5de8-b792-af2dbfb404df
+//# debugId=590db006-66e0-5157-8d84-dfb8d411c26f
