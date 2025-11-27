@@ -307,6 +307,16 @@ else
   echo "Passwordless permission for biometrics granted to '$USERNAME'."
 fi
 
+# Frank restart (needed for device label watcher on Pod 3 hub with Pod 4+ cover)
+SUDOERS_FRANK_RULE="$USERNAME ALL=(root) NOPASSWD: /bin/systemctl restart frank"
+if sudo grep -Fxq "$SUDOERS_FRANK_RULE" "$SUDOERS_FILE" 2>/dev/null; then
+  echo "Rule for '$USERNAME' frank restart permissions already exists."
+else
+  echo "$SUDOERS_FRANK_RULE" | sudo tee -a "$SUDOERS_FILE" >> /dev/null
+  sudo chmod 440 "$SUDOERS_FILE"
+  echo "Passwordless permission for frank restart granted to '$USERNAME'."
+fi
+
 echo ""
 
 sh /home/dac/free-sleep/scripts/add_shortcuts.sh

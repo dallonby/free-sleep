@@ -1,11 +1,12 @@
 
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="9db73c62-f014-5de8-b792-af2dbfb404df")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="81fa52d7-7701-563d-8a03-8c99fdab0cba")}catch(e){}}();
 import './instrument.js';
 import express from 'express';
 import schedule from 'node-schedule';
 import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
 import { FrankenMonitor } from './8sleep/frankenMonitor.js';
+import { deviceLabelWatcher } from './8sleep/deviceLabelWatcher.js';
 import './jobs/jobScheduler.js';
 // Setup code
 import setupMiddleware from './setup/middleware.js';
@@ -65,6 +66,7 @@ async function gracefulShutdown(signal) {
             });
         }
         if (!config.remoteDevMode) {
+            deviceLabelWatcher.stop();
             frankenMonitor?.stop();
             await disconnectFranken();
             logger.debug('Successfully closed Franken components.');
@@ -106,9 +108,14 @@ async function startServer() {
     // Initialize Franken once before listening
     if (!config.remoteDevMode) {
         void initFranken()
-            .then(() => {
+            .then(async () => {
             setupSentryTags();
             initFrankenMonitor();
+            // Start device label watcher for Pod 3 hub with Pod 4+ cover
+            // Must run after franken connects so we can detect the cover version
+            const franken = await connectFranken();
+            const deviceStatus = await franken.getDeviceStatus(false);
+            await deviceLabelWatcher.start(deviceStatus.coverVersion);
         })
             .catch(error => {
             serverStatus.status.franken.status = 'failed';
@@ -139,4 +146,4 @@ startServer().catch((err) => {
     process.exit(1);
 });
 //# sourceMappingURL=server.js.map
-//# debugId=9db73c62-f014-5de8-b792-af2dbfb404df
+//# debugId=81fa52d7-7701-563d-8a03-8c99fdab0cba
