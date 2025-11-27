@@ -1,11 +1,12 @@
 
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="590db006-66e0-5157-8d84-dfb8d411c26f")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="d2c96d62-31c7-5e53-9079-9f9facc9b8c7")}catch(e){}}();
 import './instrument.js';
 import express from 'express';
 import schedule from 'node-schedule';
 import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
 import { frankenMonitor } from './8sleep/frankenMonitor.js';
+import { deviceLabelWatcher } from './8sleep/deviceLabelWatcher.js';
 import './jobs/jobScheduler.js';
 // Setup code
 import setupMiddleware from './setup/middleware.js';
@@ -64,6 +65,7 @@ async function gracefulShutdown(signal) {
             });
         }
         if (!config.remoteDevMode) {
+            deviceLabelWatcher.stop();
             frankenMonitor.stop();
             await disconnectFranken();
             logger.debug('Successfully closed Franken components.');
@@ -103,6 +105,9 @@ async function startServer() {
     serverStatus.status.logger.status = 'healthy';
     // Initialize Franken once before listening
     if (!config.remoteDevMode) {
+        // Start device label watcher to fix Pod 3 hub with Pod 4+ cover
+        // This must run before franken connects so the hub uses correct firmware
+        void deviceLabelWatcher.start();
         void initFranken()
             .then(() => {
             setupSentryTags();
@@ -137,4 +142,4 @@ startServer().catch((err) => {
     process.exit(1);
 });
 //# sourceMappingURL=server.js.map
-//# debugId=590db006-66e0-5157-8d84-dfb8d411c26f
+//# debugId=d2c96d62-31c7-5e53-9079-9f9facc9b8c7
