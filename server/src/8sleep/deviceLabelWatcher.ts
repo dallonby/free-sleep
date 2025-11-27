@@ -102,7 +102,7 @@ class DeviceLabelWatcher {
   private async restartFrankService(): Promise<void> {
     try {
       logger.info('Restarting frank service...');
-      await execAsync('systemctl restart frank');
+      await execAsync('sudo /bin/systemctl restart frank');
       logger.info('Frank service restarted successfully');
     } catch (error) {
       logger.error('Failed to restart frank service:', error);
