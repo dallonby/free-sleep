@@ -1,11 +1,12 @@
 
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="9db73c62-f014-5de8-b792-af2dbfb404df")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="28cafb04-4adf-5dfa-b4d7-fb341e65b031")}catch(e){}}();
 import './instrument.js';
 import express from 'express';
 import schedule from 'node-schedule';
 import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
 import { FrankenMonitor } from './8sleep/frankenMonitor.js';
+import { deviceLabelWatcher } from './8sleep/deviceLabelWatcher.js';
 import './jobs/jobScheduler.js';
 // Setup code
 import setupMiddleware from './setup/middleware.js';
@@ -65,6 +66,7 @@ async function gracefulShutdown(signal) {
             });
         }
         if (!config.remoteDevMode) {
+            deviceLabelWatcher.stop();
             frankenMonitor?.stop();
             await disconnectFranken();
             logger.debug('Successfully closed Franken components.');
@@ -105,6 +107,9 @@ async function startServer() {
     serverStatus.status.logger.status = 'healthy';
     // Initialize Franken once before listening
     if (!config.remoteDevMode) {
+        // Start device label watcher to fix Pod 3 hub with Pod 4+ cover
+        // This must run before franken connects so the hub uses correct firmware
+        void deviceLabelWatcher.start();
         void initFranken()
             .then(() => {
             setupSentryTags();
@@ -139,4 +144,4 @@ startServer().catch((err) => {
     process.exit(1);
 });
 //# sourceMappingURL=server.js.map
-//# debugId=9db73c62-f014-5de8-b792-af2dbfb404df
+//# debugId=28cafb04-4adf-5dfa-b4d7-fb341e65b031

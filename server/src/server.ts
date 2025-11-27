@@ -5,6 +5,7 @@ import { Server } from 'http';
 import logger from './logger.js';
 import { connectFranken, disconnectFranken } from './8sleep/frankenServer.js';
 import { FrankenMonitor } from './8sleep/frankenMonitor.js';
+import { deviceLabelWatcher } from './8sleep/deviceLabelWatcher.js';
 import './jobs/jobScheduler.js';
 
 
@@ -71,6 +72,7 @@ async function gracefulShutdown(signal: string) {
     }
 
     if (!config.remoteDevMode) {
+      deviceLabelWatcher.stop();
       frankenMonitor?.stop();
       await disconnectFranken();
       logger.debug('Successfully closed Franken components.');
@@ -118,6 +120,10 @@ async function startServer() {
 
   // Initialize Franken once before listening
   if (!config.remoteDevMode) {
+    // Start device label watcher to fix Pod 3 hub with Pod 4+ cover
+    // This must run before franken connects so the hub uses correct firmware
+    void deviceLabelWatcher.start();
+
     void initFranken()
       .then(() => {
         setupSentryTags();
