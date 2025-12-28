@@ -37,7 +37,7 @@ ADJUSTMENT_COOLDOWN_S = 600  # 10 min between any adjustments (thermal lag)
 
 # Shivering detection (too cold → warm up)
 SHIVER_WARMTH_ADJUSTMENT = 10  # Level units to increase (~1.5°C)
-SHIVER_THRESHOLD = 0.3  # Only trigger on high-confidence shivering
+SHIVER_THRESHOLD = 0.5  # Fraction of windows showing shivering (raised from 0.3 to reduce false positives)
 
 # Restlessness detection (too warm → cool down)
 RESTLESS_COOL_ADJUSTMENT = -10  # Level units to decrease (~1.5°C)
@@ -149,12 +149,20 @@ class StreamProcessor:
             processor = self.left_processor if side == 'left' else self.right_processor
 
             # === 1. SHIVERING DETECTION (too cold → warm up) ===
+            # bcg_detect_shivering returns:
+            #   - shiver_mask: boolean array, True where power ratio > 2x baseline
+            #   - shiver_power: raw power ratios (NOT normalized, typically 2-8 during normal sleep)
+            #
+            # FIX: Only use shiver_mask (boolean), not shiver_power (raw intensity).
+            # The old formula used intensity which caused false positives because cardiac
+            # harmonics leak into the 6-14Hz "shiver band", giving ratios of 3-6 even
+            # during normal sleep. The boolean mask correctly triggers only when power
+            # significantly exceeds the signal's own baseline.
             shiver_mask, shiver_power = bcg_detect_shivering(
                 piezo_signal, PIEZO_SAMPLE_RATE, window_seconds=5.0
             )
-            shiver_fraction = float(np.mean(shiver_mask)) if len(shiver_mask) > 0 else 0.0
-            shiver_intensity = float(np.mean(shiver_power)) / 2.0 if len(shiver_power) > 0 else 0.0
-            shiver_score = max(0.0, min(1.0, shiver_fraction * 0.5 + (shiver_intensity - 1.0) * 0.5))
+            # shiver_score = fraction of 5-second windows showing shivering pattern
+            shiver_score = float(np.mean(shiver_mask)) if len(shiver_mask) > 0 else 0.0
 
             state['shiver_history'].append(shiver_score)
             if len(state['shiver_history']) > 5:
